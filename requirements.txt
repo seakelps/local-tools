@@ -4,3 +4,5 @@ requests
 requests_cache
 python-dateutil
 lxml
+pandas
+xlrd
