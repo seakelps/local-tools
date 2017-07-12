@@ -5,6 +5,9 @@ Sorry for using pandas to do this, the csv export is malformed but the xlsx
 works.
 """
 
+import argparse
+from tqdm import tqdm
+import csv
 import pandas
 from datetime import datetime
 import requests
@@ -73,10 +76,41 @@ def get_donors_by_candidate(cpf_id):
         .format(cpf_id))
 
 
+def get_expenditures_by_candidate(cpf_id):
+    return requests.get(
+        "http://www.ocpf.us/ReportData/GetReportItems?PageSize=20000&CurrentIndex=1&SortField=&SortDirection=ASC&&SearchType=B&CityCode=0&FilerCpfId={}"  # noqa
+        .format(cpf_id))
+
+
 if __name__ == "__main__":
+    a = argparse.ArgumentParser()
+    a.add_argument("--donors", action='store_true')
+    a.add_argument("--expenditures", action='store_true')
+    args = a.parse_args()
+
+    if not (args.donors or args.expenditures):
+        a.print_help()
+        exit(1)
+
     filers = get_registered_filer_ids()
     assert len(filers) < 1000
 
-    with open("cambridge_donors.csv", "w") as fp:
-        for cpf_id in filers:
-            fp.write(get_donors_by_candidate(cpf_id).content.decode('utf-8'))
+    if args.donors:
+        with open("cambridge_donors.csv", "w") as fp:
+            for cpf_id in filers:
+                fp.write(get_donors_by_candidate(cpf_id).content.decode('utf-8'))
+
+    if args.expenditures:
+        with open("cambridge_expenditures.csv", "w") as fp:
+            out = None
+            for cpf_id in tqdm(filers):
+                resp = get_expenditures_by_candidate(cpf_id)
+                if not resp.ok:
+                    print("can't grab", cpf_id)
+                    continue
+
+                for row in resp.json():
+                    if not out:
+                        out = csv.DictWriter(fp, fieldnames=row.keys())
+                        out.writeheader()
+                    out.writerow(row)
