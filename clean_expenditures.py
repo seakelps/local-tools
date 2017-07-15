@@ -6,11 +6,20 @@ df = pandas.read_csv(
     dtype={"Zip": str},
     parse_dates=['DateDisplay'])
 
+del df['AmountDisplay']
+del df['CityStateZip']
+
 del df['Date']
-df['Date'] = df['DateDisplay']
+df['Date'] = df.pop('DateDisplay')
 
 # Data is pretty messy. see 981101
 df['Zip'] = df.Zip.str.extract("(\d{5})")
 
 
 df.groupby("Zip").Amount.agg(['sum', 'count'])
+
+
+['Amount', 'FullAddress', 'CpfId', 'Zip', 'Vendor', 'PurposeSource',
+ 'State', 'RecordTypeId', 'City', 'FilerFullNameReverse',
+ 'ClarifiedName', 'VendorStreetAddress', 'StreetAddress', 'Purpose',
+ 'ReportId', 'ClarifiedPurpose', 'VendorFullAddress', 'Date'],
