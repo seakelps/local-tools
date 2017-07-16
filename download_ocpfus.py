@@ -16,7 +16,7 @@ import zipfile
 from io import BytesIO
 
 
-#requests_cache.install_cache("donor_history")
+requests_cache.install_cache("donor_history")
 
 
 def get_registered_filer_ids():
@@ -77,9 +77,20 @@ def get_donors_by_candidate(cpf_id):
 
 
 def get_expenditures_by_candidate(cpf_id):
-    return requests.get(
-        "http://www.ocpf.us/ReportData/GetReportItems?PageSize=20000&CurrentIndex=1&SortField=&SortDirection=ASC&&SearchType=B&CityCode=0&FilerCpfId={}"  # noqa
-        .format(cpf_id))
+    size = 2000
+    for page in range(0, 5):
+        resp = requests.get(
+            "http://www.ocpf.us/ReportData/GetReportItems?PageSize={}&CurrentIndex={}1&SortField=&SortDirection=ASC&&SearchType=B&CityCode=0&FilerCpfId={}"  # noqa
+            .format(size, page * size + 1, cpf_id))
+
+        resp.raise_for_status()
+        js = resp.json()
+
+        if not js:
+            raise StopIteration("all done")
+
+        for row in js:
+            yield row
 
 
 # Returns the data from the candidate > "Reports" > "Report Type: Bank Reports".
@@ -88,7 +99,7 @@ def get_expenditures_by_candidate(cpf_id):
 def get_bank_reports_by_candidate(cpf_id):
     return requests.get(
         # "http://www.ocpf.us/ReportData/GetReports?PageSize=20000&CurrentIndex=1&&ReportYear=-1&BaseReportTypeId=4&CurrentOnly=on&ReportFilerCpfId={}"
-        "http://www.ocpf.us/ReportData/GetReports?PageSize=20000&BaseReportTypeId=4&CurrentOnly=on&ReportFilerCpfId={}"
+        "http://www.ocpf.us/ReportData/GetReports?PageSize=20000&BaseReportTypeId=4&CurrentOnly=on&ReportFilerCpfId={}"  # noqa
         .format(cpf_id), timeout=5)
 
 
@@ -117,12 +128,7 @@ if __name__ == "__main__":
         with open("cambridge_expenditures.csv", "w") as fp:
             out = None
             for cpf_id in tqdm(filers):
-                resp = get_expenditures_by_candidate(cpf_id)
-                if not resp.ok:
-                    print("can't grab", cpf_id)
-                    continue
-
-                for row in resp.json():
+                for row in get_expenditures_by_candidate(cpf_id):
                     if not out:
                         out = csv.DictWriter(fp, fieldnames=row.keys())
                         out.writeheader()
@@ -133,7 +139,7 @@ if __name__ == "__main__":
         with open("cambridge_bank_reports.csv", "w") as fp:
             out = None
             for cpf_id in tqdm(filers):
-                response = get_expenditures_by_candidate(cpf_id)
+                response = get_bank_reports_by_candidate(cpf_id)
                 if not response.ok:
                     print("there was a not ok response from ocpf.us", cpf_id)
                     print(response.status_code)
