@@ -16,7 +16,7 @@ import zipfile
 from io import BytesIO
 
 
-requests_cache.install_cache("donor_history")
+#requests_cache.install_cache("donor_history")
 
 
 def get_registered_filer_ids():
@@ -82,24 +82,37 @@ def get_expenditures_by_candidate(cpf_id):
         .format(cpf_id))
 
 
+# Returns the data from the candidate > "Reports" > "Report Type: Bank Reports".
+# Technically all this data is elsewhere (this data is a summary of the receipts/expenditures)
+# but pre-calculated summaries are nice.
+def get_bank_reports_by_candidate(cpf_id):
+    return requests.get(
+        # "http://www.ocpf.us/ReportData/GetReports?PageSize=20000&CurrentIndex=1&&ReportYear=-1&BaseReportTypeId=4&CurrentOnly=on&ReportFilerCpfId={}"
+        "http://www.ocpf.us/ReportData/GetReports?PageSize=20000&BaseReportTypeId=4&CurrentOnly=on&ReportFilerCpfId={}"
+        .format(cpf_id), timeout=5)
+
+
 if __name__ == "__main__":
     a = argparse.ArgumentParser()
     a.add_argument("--donors", action='store_true')
     a.add_argument("--expenditures", action='store_true')
+    a.add_argument("--bankreports", action='store_true')
     args = a.parse_args()
 
-    if not (args.donors or args.expenditures):
+    if not (args.donors or args.expenditures or args.bankreports):
         a.print_help()
         exit(1)
 
     filers = get_registered_filer_ids()
     assert len(filers) < 1000
 
+    # TODO: COMMENT HI ALEX
     if args.donors:
         with open("cambridge_donors.csv", "w") as fp:
             for cpf_id in filers:
                 fp.write(get_donors_by_candidate(cpf_id).content.decode('utf-8'))
 
+    # TODO: COMMENT HI ALEX
     if args.expenditures:
         with open("cambridge_expenditures.csv", "w") as fp:
             out = None
@@ -110,6 +123,25 @@ if __name__ == "__main__":
                     continue
 
                 for row in resp.json():
+                    if not out:
+                        out = csv.DictWriter(fp, fieldnames=row.keys())
+                        out.writeheader()
+                    out.writerow(row)
+
+    # graps the json response, converts it to csv, saves it
+    if args.bankreports:
+        with open("cambridge_bank_reports.csv", "w") as fp:
+            out = None
+            for cpf_id in tqdm(filers):
+                response = get_expenditures_by_candidate(cpf_id)
+                if not response.ok:
+                    print("there was a not ok response from ocpf.us", cpf_id)
+                    print(response.status_code)
+                    print(response.content)
+
+                    continue
+
+                for row in response.json():
                     if not out:
                         out = csv.DictWriter(fp, fieldnames=row.keys())
                         out.writeheader()
