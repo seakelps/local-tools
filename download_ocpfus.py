@@ -9,7 +9,6 @@ import argparse
 from tqdm import tqdm
 import csv
 import pandas
-from datetime import datetime
 import requests
 import requests_cache
 import zipfile
@@ -34,7 +33,7 @@ def get_registered_filer_ids():
     """
 
     # preseed with current
-    councelors = {
+    councillors = {
         15680,  # Carlone Committee
         50019,  # Carlone for Council Recount
         16062,  # Devereux
@@ -61,12 +60,13 @@ def get_registered_filer_ids():
     # parse_dates doesn't work in read_xlst
     registered_filers['Org_Date'] = pandas.to_datetime(registered_filers['Org_Date'])
     is_candidate = registered_filers['Category_Description'] == "Depository Candidate"
-    is_recent = registered_filers['Org_Date'] > datetime(2011, 1, 1)
+    is_council = registered_filers['Office_District'].isin(
+        ['City Councilor, Cambridge', 'Municipal, Cambridge'])
 
-    candidates = registered_filers[is_candidate & is_recent]
-    councelors.update(candidates.CPF_ID.values)
+    candidates = registered_filers[is_candidate & is_council]
 
-    return councelors
+    councillors.update(candidates.CPF_ID.values)
+    return councillors
 
 
 def get_donors_by_candidate(cpf_id):
@@ -110,12 +110,11 @@ if __name__ == "__main__":
     a.add_argument("--bankreports", action='store_true')
     args = a.parse_args()
 
+    filers = get_registered_filer_ids()
+
     if not (args.donors or args.expenditures or args.bankreports):
         a.print_help()
         exit(1)
-
-    filers = get_registered_filer_ids()
-    assert len(filers) < 1000
 
     # TODO: COMMENT HI ALEX
     if args.donors:
