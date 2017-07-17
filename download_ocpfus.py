@@ -34,16 +34,16 @@ def get_registered_filer_ids():
 
     # preseed with current
     councillors = {
-        15680,  # Carlone Committee
-        50019,  # Carlone for Council Recount
-        16062,  # Devereux
-        13783,  # Simmons Committee
-        14923,  # Cheung Committee
-        15589,  # McGovern Committee
-        12222,  # Toomey Committee
-        15615,  # Mazen Committee
-        14104,  # Kelley Committee
-        13740,  # Maher Committee
+        15680: "carlone",  # Carlone Committee
+        50019: "carlone2",  # Carlone for Council Recount
+        16062: "devereux",  # Devereux
+        13783: "denise-simmons",  # Simmons Committee
+        14923: "leland-cheung",  # Cheung Committee
+        15589: "marc-mcgovern",  # McGovern Committee
+        12222: "timothy-toomey",  # Toomey Committee
+        15615: "nadeem-mazen",  # Mazen Committee
+        14104: "craig-kelley",  # Kelley Committee
+        13740: "maher",  # Maher Committee
     }
 
     registration_resp = requests.get(
@@ -65,8 +65,10 @@ def get_registered_filer_ids():
 
     candidates = registered_filers[is_candidate & is_council]
 
-    councillors.update(candidates.CPF_ID.values)
-    return councillors
+    found_councillors = {id_: name.lower().replace(' ', '-')
+                         for id_, name in candidates[['CPF_ID', 'Candidate_Full_Name']].values}
+    found_councillors.update(councillors)
+    return found_councillors
 
 
 def get_donors_by_candidate(cpf_id):
