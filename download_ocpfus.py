@@ -13,9 +13,9 @@ import requests
 import requests_cache
 import zipfile
 from io import BytesIO
+from datetime import timedelta
 
-
-requests_cache.install_cache("donor_history")
+requests_cache.install_cache("donor_history", expire_after=timedelta(days=7))
 
 
 def get_registered_filer_ids():
@@ -121,7 +121,7 @@ if __name__ == "__main__":
     # TODO: COMMENT HI ALEX
     if args.donors:
         with open("cambridge_donors.csv", "w") as fp:
-            for cpf_id in filers:
+            for cpf_id in tqdm(filers):
                 fp.write(get_donors_by_candidate(cpf_id).content.decode('utf-8'))
 
     # TODO: COMMENT HI ALEX
