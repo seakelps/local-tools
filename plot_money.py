@@ -12,71 +12,28 @@ import matplotlib.cm as cm
 
 
 def get_candidates():
-    return [
-        ['Craig Kelley', 1825.99, 1098.91, 1504.76, 2231.84],
-        # ['Dan Lenke', None, None, None, 0],
-        # ['Hari Pillai', None, None, None, 0],
-        ['Alanna Mallon', 20117.36, 39048.00, 19030.64, 100.00],
-        # ['Jan Devereux', 27256.99, None, None, 8715.10],
-        ['Bryan Sutton', 177.85, 300.00, 122.15, 0],
-        ['Sam Gebru', 1763.83, 32383.50, 30619.67, 0.00],
-        ['Gwendolyn Volmar', 4476.37, 7652.25, 3175.88, 0],
-        ['Adriane Musgrave', 3554.69, 10478.14, 6923.45, 0],
-        ['Dennis Carlone', 26880.02, 17310.71, 8258.56, 17827.87],
-        ['Jeffrey Santos', 579.22, 3395.00, 2815.78, 0],
-        ["Olivia D'Ambrosio", 1947.04, 5250.31, 3426.02, 122.75],
-        ['Ronald Benjamin', 7.56, 680.92, 682.36, 9.00],
-        ['Quinton Zondervan', 1180.47, 24795.88, 27125.41, 3510.00],
-        ['Sean Tierney', 11332.40, 19025.29, 7692.89, 0],
-        ['Paul Toner', 15739.82, 36314.25, 20574.43, 0],
-        ['Nadya Okamoto', 4926.43, 7133.78, 2207.35, 0],
-        ['Sumbul Siddiqui', 18281.17, 30634.60, 12353.43, 0],
-        ['Vatsady Sivongxay', 9096.13, 25389.72, 16293.59, 0.00],
-        ['Marc McGovern', 21488.60, 32067.05, 25545.11, 14966.66],
-        ['Richard Harding', 1162.17, 0.00, 798.89, 0],
-        ['Denise Simmons', 18911.16, 21403.10, 12671.73, 10179.79],
-        ['Josh Burgin', 500.00, 500.00, 0.00, 0],
-        # ['Gregg Moree', 0.00, None, None, 0],
-        ['Timothy Toomey', 35917.95, 41022.33, 9174.05, 4069.67],
-        ['Ilan Levy', 1000.00, 1000.38, 0.38, 0]
-    ]
+    from overview.models import Candidate
+    from campaign_finance.models import (
+        RawBankReport,
+        get_candidate_2017_raised, get_candidate_2017_spent,
+        get_candidate_money_at_start_of_2017)
+    print('working!')
 
+    def balance(candidate):
+        try:
+            return RawBankReport.objects\
+                .filter(cpf_id=candidate.cpf_id)\
+                .latest("filing_date")\
+                .ending_balance_display
+        except RawBankReport.DoesNotExist:
+            pass
 
-    old = [  # noqa
-        # ['Jan Deveruex', 20242.08, None, None, 8715.1],  # none yet?
-
-        # BOTTOM LEFT
-        ['Bryan Sutton', 100.0, 100.0, 0.0, 0.0],
-
-        # RIGHT
-        ['Craig Kelley', 2158.88, 461.04, 534.0, 2231.84],
-
-        # LEFT
-        ['Jeffrey Santos', 215.28, 260.0, 44.72, 0.0],
-
-        # TOP LEFT
-        ['Josh Burgin', 500.0, 500.0, 0.0, 0.0],
-
-        # TOP RIGHT
-        ['Ronald Benjamin', 7.56, 680.92, 682.36, 9.0],
-
-        ['Adriane Musgrave', 3391.05, 6298.64, 2907.59, 0.0],
-        ['Alanna Marie Mallon', 17788.57, 29293.0, 11604.43, 100.0],
-        ['Denise Simmons', 9851.15, 7592.33, 7920.97, 10179.79],
-        ['Dennis Carlone', 31866.53, 14776.22, 737.56, 17827.87],
-        ['Gwendolyn Volmar', 2736.13, 2763.26, 27.13, 0.0],
-        ['Leland Cheung', 82049.82, 0.0, 8830.5, 90880.32],
-        ['Marc McGovern', 24144.94, 21818.84, 12640.56, 14966.66],
-        ['Nadya Okamoto', 3907.88, 4605.43, 697.55, 0.0],
-        ["Olivia D'Ambrosio", 1947.04, 5250.31, 3426.02, 122.75],
-        ['Paul Toner', 18277.0, 31969.25, 13692.25, 0.0],
-        ['Quinton Zondervan', 5597.63, 19331.35, 17243.72, 3510.0],
-        ['Sam Gebru', 946.54, 27398.5, 26451.96, 0.0],
-        ['Sean Tierney', 8224.43, 13589.6, 5365.17, 0.0],
-        ['Sumbul Siddiqui', 19402.56, 25569.6, 6167.04, 0.0],
-        ['Timothy Toomey', 24126.3, 28180.89, 8124.26, 4069.67],
-        ['Vatsady Sivongxay', 10852.85, 21962.16, 11109.31, 0.0],
-    ]
+    print([(c.fullname,
+            balance(c),
+            get_candidate_2017_raised(c.cpf_id),
+            get_candidate_2017_spent(c.cpf_id),
+            get_candidate_money_at_start_of_2017(c.cpf_id))
+           for c in Candidate.objects.filter(is_running=True)])
 
 
 def plot_data(data):
@@ -189,7 +146,3 @@ def plot_data(data):
     plt.tight_layout()
     plt.savefig("money-2017-08-20.svg")
     plt.savefig("money-2017-08-20.png")
-
-
-if __name__ == "__main__":
-    plot_data(get_candidates())
