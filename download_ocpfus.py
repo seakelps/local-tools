@@ -15,7 +15,7 @@ import zipfile
 from io import BytesIO
 from datetime import timedelta
 
-requests_cache.install_cache("donor_history", expire_after=timedelta(days=7))
+requests_cache.install_cache("donor_history", expire_after=timedelta(hour=1))
 
 
 def get_registered_filer_ids():
@@ -80,9 +80,9 @@ def get_donors_by_candidate(cpf_id):
 
 def get_expenditures_by_candidate(cpf_id):
     size = 2000
-    for page in range(0, 5):
+    for page in range(0, 20):
         resp = requests.get(
-            "http://www.ocpf.us/ReportData/GetReportItems?PageSize={}&CurrentIndex={}1&SortField=&SortDirection=ASC&&SearchType=B&CityCode=0&FilerCpfId={}"  # noqa
+            "http://www.ocpf.us/ReportData/GetReportItems?PageSize={}&CurrentIndex={}&SortField=&SortDirection=ASC&&SearchType=B&CityCode=0&FilerCpfId={}"  # noqa
             .format(size, page * size + 1, cpf_id))
 
         resp.raise_for_status()
