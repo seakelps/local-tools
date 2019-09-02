@@ -15,7 +15,7 @@ import zipfile
 from io import BytesIO
 from datetime import timedelta
 
-requests_cache.install_cache("donor_history", expire_after=timedelta(hour=1))
+requests_cache.install_cache("donor_history", expire_after=timedelta(hours=1))
 
 
 def get_registered_filer_ids():
@@ -55,7 +55,7 @@ def get_registered_filer_ids():
     # columns don't all seem to line up in the .txt version but do work in the xlsx.
     registered_filers = pandas.read_excel(
         BytesIO(zip_ref.read("registered-all.xlsx")),
-        sheetname=1)
+        sheet_name=1)
 
     # parse_dates doesn't work in read_xlst
     registered_filers['Org_Date'] = pandas.to_datetime(registered_filers['Org_Date'])
