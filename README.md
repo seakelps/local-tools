@@ -12,3 +12,8 @@ I DON'T REMEMBER AND WISH I'D WRITTEN IT DOWN.
 
 DON'T BE LIKE ME.
 WRITE IT DOWN.
+
+Maybe it's like this?
+```
+~$ python3 download_ocpfus.py
+```
