@@ -101,7 +101,7 @@ def get_expenditures_by_candidate(cpf_id):
 def get_bank_reports_by_candidate(cpf_id):
     return requests.get(
         # "http://www.ocpf.us/ReportData/GetReports?PageSize=20000&CurrentIndex=1&&ReportYear=-1&BaseReportTypeId=4&CurrentOnly=on&ReportFilerCpfId={}"
-        "http://www.ocpf.us/ReportData/GetReports?PageSize=20000&BaseReportTypeId=4&CurrentOnly=on&ReportFilerCpfId={}"  # noqa
+        "https://www.ocpf.us/ReportData/GetReportsAndSummary?pageSize=20000&currentIndex=1&reportYear=-1&currentOnly=on&baseReportTypeId=4&reportFilerCpfId={}"  # noqa
         .format(cpf_id), timeout=5)
 
 
@@ -148,7 +148,7 @@ if __name__ == "__main__":
 
                     continue
 
-                for row in response.json():
+                for row in response.json()["items"]:
                     if not out:
                         out = csv.DictWriter(fp, fieldnames=row.keys())
                         out.writeheader()
