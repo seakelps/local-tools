@@ -15,8 +15,8 @@ def get_candidates():
     from overview.models import Candidate
     from campaign_finance.models import (
         RawBankReport,
-        get_candidate_2017_raised, get_candidate_2017_spent,
-        get_candidate_money_at_start_of_2017)
+        get_candidate_2019_raised, get_candidate_2019_spent,
+        get_candidate_money_at_start_of_2019)
     print('working!')
 
     def balance(candidate):
@@ -30,9 +30,9 @@ def get_candidates():
 
     print([(c.fullname,
             balance(c),
-            get_candidate_2017_raised(c.cpf_id),
-            get_candidate_2017_spent(c.cpf_id),
-            get_candidate_money_at_start_of_2017(c.cpf_id))
+            get_candidate_2019_raised(c.cpf_id),
+            get_candidate_2019_spent(c.cpf_id),
+            get_candidate_money_at_start_of_2019(c.cpf_id))
            for c in Candidate.objects.filter(is_running=True)])
 
 
@@ -55,9 +55,9 @@ def plot_data(data):
     ax.set_xlim(-2000, xs.max() + 1000)
     ax.set_ylim(-4000, ys.max() + 200)
 
-    plt.xlabel("Raised in 2017", fontsize=20)
-    plt.ylabel("Spent in 2017", fontsize=20)
-    ax.annotate("Operating Balance\nfor City Council Candidates\nCambridge, MA (8/2017)",
+    plt.xlabel("Raised in 2019", fontsize=20)
+    plt.ylabel("Spent in 2019", fontsize=20)
+    ax.annotate("Operating Balance\nfor City Council Candidates\nCambridge, MA (9/2019)",
                 (0.5, 0.90), ha="center", xycoords="axes fraction", fontsize=20)
     ax.annotate("cambridgecouncilcandidates.com",
                 (0.98, 0.03),
@@ -144,5 +144,5 @@ def plot_data(data):
                         xytext=(-25, (area * 0.04) ** 0.5))
 
     plt.tight_layout()
-    plt.savefig("money-2017-08-20.svg")
-    plt.savefig("money-2017-08-20.png")
+    plt.savefig("money-2019-09-02.svg")
+    plt.savefig("money-2019-09-02.png")
