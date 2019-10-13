@@ -55,7 +55,7 @@ def get_registered_filer_ids():
     # columns don't all seem to line up in the .txt version but do work in the xlsx.
     registered_filers = pandas.read_excel(
         BytesIO(zip_ref.read("registered-all.xlsx")),
-        sheetname=1)
+        sheet_name=1)
 
     # parse_dates doesn't work in read_xlst
     registered_filers['Org_Date'] = pandas.to_datetime(registered_filers['Org_Date'])
@@ -79,6 +79,10 @@ def get_donors_by_candidate(cpf_id):
 
 
 def get_expenditures_by_candidate(cpf_id):
+    # hack - we really need to define our own list
+    if (cpf_id in [10772]):
+        return
+
     size = 2000
     for page in range(0, 20):
         resp = requests.get(
@@ -101,7 +105,7 @@ def get_expenditures_by_candidate(cpf_id):
 def get_bank_reports_by_candidate(cpf_id):
     return requests.get(
         # "http://www.ocpf.us/ReportData/GetReports?PageSize=20000&CurrentIndex=1&&ReportYear=-1&BaseReportTypeId=4&CurrentOnly=on&ReportFilerCpfId={}"
-        "http://www.ocpf.us/ReportData/GetReports?PageSize=20000&BaseReportTypeId=4&CurrentOnly=on&ReportFilerCpfId={}"  # noqa
+        "https://www.ocpf.us/ReportData/GetReportsAndSummary?pageSize=20000&currentIndex=1&reportYear=-1&currentOnly=on&baseReportTypeId=4&reportFilerCpfId={}"  # noqa
         .format(cpf_id), timeout=5)
 
 
@@ -153,7 +157,7 @@ if __name__ == "__main__":
 
                     continue
 
-                for row in response.json():
+                for row in response.json()["items"]:
                     if not out:
                         out = csv.DictWriter(fp, fieldnames=row.keys())
                         out.writeheader()
