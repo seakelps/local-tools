@@ -79,6 +79,10 @@ def get_donors_by_candidate(cpf_id):
 
 
 def get_expenditures_by_candidate(cpf_id):
+    # hack - we really need to define our own list
+    if (cpf_id in [10772]):
+        return
+
     size = 2000
     for page in range(0, 20):
         resp = requests.get(
