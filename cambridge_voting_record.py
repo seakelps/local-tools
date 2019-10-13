@@ -1,5 +1,6 @@
 """ Download the cambridge city council voting records from Accela """
 
+import tqdm
 from html2text import html2text
 import csv
 import logging
@@ -9,9 +10,10 @@ import re
 import bs4
 import requests
 import requests_cache
+import datetime
 from dateutil.parser import parse as parse_dt
 
-requests_cache.install_cache("member_history")
+requests_cache.install_cache("member_history", expire_after=datetime.timedelta(days=10))
 HISTORY = 'http://cambridgema.iqm2.com/Citizens/Detail_BoardMember.aspx?ID={member_id}&ShowAllItems=True&DateFilter=a&Action=GetVoteHistory&Page={page}'  # noqa
 ITEM_LINK = 'http://cambridgema.iqm2.com/Citizens/Detail_LegiFile.aspx?MeetingID={meeting_id}&ID={item_id}'  # noqa
 
@@ -29,6 +31,18 @@ COUNCIL = {
     1057: "Jan Devereux",
 }
 
+COUNCIL = {
+    1014: "Dennis J. Carlone",
+    1057: "Jan Devereux",
+    1019: "Craig A. Kelley",
+    1716: "Alanna Mallon",
+    1021: "Marc C. McGovern",
+    1368: "Sumbul Siddiqui",
+    1016: "E. Denise Simmons",
+    1018: "Timothy J. Toomey",
+    1574: "Quinton Zondervan",
+}
+
 
 ITEMS = {}  # (meeting_id, item_id): (title, body, date)
 
@@ -37,10 +51,11 @@ def download_history(member_id):
     candidate_votes = {}
 
     for page in range(1, 100):  # seems to run out of info after 10 pages
+        log.debug("scraping votes for %s: page %s", member_id, page)
         page = requests.get(HISTORY.format(member_id=member_id, page=page))
         page.raise_for_status()  # not actually 404 at end of pagination
 
-        page_soup = bs4.BeautifulSoup(page.content, 'lxml')
+        page_soup = bs4.BeautifulSoup(page.content.decode('utf-8'), 'lxml')
         items = page_soup.find_all(id=re.compile("rptVoteHistory_lnkTitle_.*"))
         votes = page_soup.find_all(id=re.compile("rptVoteHistory_lblVote_.*"))
 
@@ -75,12 +90,15 @@ def download_history(member_id):
 def download_descriptions():
     # updates the ITEMS dictionary
 
-    for meeting_id, item_id in ITEMS.keys():
+    for meeting_id, item_id in tqdm.tqdm(ITEMS.keys()):
         url = ITEM_LINK.format(meeting_id=meeting_id, item_id=item_id)
         resp = requests.get(url)
+
+        if not resp.from_cache:
+            tqdm.tqdm.write('fetching without cache %s' % meeting_id)
         resp.raise_for_status()
 
-        item_soup = bs4.BeautifulSoup(resp.content, 'lxml')
+        item_soup = bs4.BeautifulSoup(resp.content.decode('utf-8'), 'lxml')
         # seems like always just 1
         try:
             body = item_soup.find(id="divBody").find(class_="LegiFileSectionContents")
@@ -102,18 +120,23 @@ def download_descriptions():
         )
 
 
+log = logging.getLogger()
+log.setLevel(logging.WARN)
+log.addHandler(logging.StreamHandler())
+
+
 if __name__ == "__main__":
     council_votes = defaultdict(dict)
 
     for member_id, councilor in COUNCIL.items():
-        logging.info("processing %s", councilor)
+        log.info("processing %s", councilor)
         for item, vote in download_history(member_id).items():
             council_votes[item][councilor] = vote
 
     download_descriptions()
 
     print("saving to voting_record.csv")
-    with open('voting_record.csv', 'w') as fp:
+    with open('voting_record-{}.csv'.format(datetime.date.today()), 'w') as fp:
         fieldnames = ['meeting_id', 'item_id', 'date', 'item_description', 'item_body'] \
             + list(COUNCIL.values())
         record = csv.DictWriter(fp, fieldnames=fieldnames)
@@ -132,5 +155,5 @@ if __name__ == "__main__":
 
     print(ITEMS[item])
 
-    print("sample lookup")
-    print(council_votes[(1557, 2145)])
+    # print("sample lookup")
+    # print(council_votes[(1557, 2145)])

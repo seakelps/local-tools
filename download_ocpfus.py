@@ -15,7 +15,7 @@ import zipfile
 from io import BytesIO
 from datetime import timedelta
 
-requests_cache.install_cache("donor_history", expire_after=timedelta(hour=1))
+requests_cache.install_cache("donor_history", expire_after=timedelta(hours=1))
 
 
 def get_registered_filer_ids():
@@ -110,13 +110,18 @@ if __name__ == "__main__":
     a.add_argument("--donors", action='store_true')
     a.add_argument("--expenditures", action='store_true')
     a.add_argument("--bankreports", action='store_true')
+    a.add_argument("--dump-ids", action='store_true')
     args = a.parse_args()
 
     filers = get_registered_filer_ids()
 
-    if not (args.donors or args.expenditures or args.bankreports):
+    if not (args.donors or args.expenditures or args.bankreports or args.dump_ids):
         a.print_help()
         exit(1)
+
+    if args.dump_ids:
+        with open("ocpf_filers.csv", "w") as fp:
+            fp.write(get_registered_filer_ids())
 
     # TODO: COMMENT HI ALEX
     if args.donors:
