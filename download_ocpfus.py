@@ -93,7 +93,7 @@ def get_expenditures_by_candidate(cpf_id):
         js = resp.json()
 
         if not js:
-            raise StopIteration("all done")
+            return
 
         for row in js:
             yield row
