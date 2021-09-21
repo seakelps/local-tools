@@ -2,8 +2,8 @@
 
 from overview.models import Candidate
 from campaign_finance.models import (
-    RawBankReport, get_candidate_2019_raised,
-    get_candidate_2019_spent, get_candidate_money_at_start_of_2019)
+    RawBankReport, get_candidate_2021_raised,
+    get_candidate_2021_spent, get_candidate_money_at_start_of_2021)
 
 
 candidate_data = []
@@ -18,8 +18,8 @@ for cand in Candidate.objects.exclude(is_running=False):
     candidate_data.append([
         cand.fullname,
         latest_bank_report.ending_balance_display if latest_bank_report else None,
-        get_candidate_2019_raised(cand.cpf_id),
-        get_candidate_2019_spent(cand.cpf_id),
-        get_candidate_money_at_start_of_2019(cand.cpf_id)])
+        get_candidate_2021_raised(cand.cpf_id),
+        get_candidate_2021_spent(cand.cpf_id),
+        get_candidate_money_at_start_of_2021(cand.cpf_id)])
 
 print(candidate_data)

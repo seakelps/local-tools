@@ -18,7 +18,7 @@ for c in Candidate.objects.filter(is_running=True).filter(hide=False).exclude(cp
     writer.writerow((
         c.fullname,
         balance,
-        cfm.get_candidate_2019_raised(c.cpf_id),
-        cfm.get_candidate_2019_spent(c.cpf_id),
-        cfm.get_candidate_money_at_start_of_2019(c.cpf_id),
+        cfm.get_candidate_2021_raised(c.cpf_id),
+        cfm.get_candidate_2021_spent(c.cpf_id),
+        cfm.get_candidate_money_at_start_of_2021(c.cpf_id),
     ))
