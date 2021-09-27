@@ -18,7 +18,7 @@ from datetime import timedelta
 requests_cache.install_cache("donor_history", expire_after=timedelta(hours=1))
 
 
-2021_candidates = {
+candidates_2021 = {
     # 2021 incumbents
     16530: 'alanna-marie-mallon',
     12222: 'timothy-toomey',
@@ -60,6 +60,8 @@ def get_registered_filer_ids():
     Vice Mayor Marc C. McGovern.  Timothy J. Toomey, Jr., Nadeem A. Mazen,
     Craig A. Kelley, and David P. Maher.
     """
+
+    return candidates_2021
 
     # preseed with current
     councillors = {
