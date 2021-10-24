@@ -42,6 +42,10 @@ COUNCIL = {
 ITEMS = {}  # (meeting_id, item_id): (title, body, date)
 
 
+class Skip(Exception):
+    pass
+
+
 def download_history(member_id):
     candidate_votes = {}
 
@@ -97,7 +101,7 @@ def _parse_item(content):
     try:
         date = parse_dt(item_soup.find(id="ContentPlaceholder1_lnkDate").text).date()
     except AttributeError:
-        date = None
+        raise Skip("no date, probably not a vote")
 
     return (
         item_soup.find(id="ContentPlaceholder1_lblLegiFileTitle").text,
@@ -119,6 +123,8 @@ def download_descriptions():
 
         try:
             ITEMS[(meeting_id, item_id)] = _parse_item(resp.content.decode("utf-8"))
+        except Skip:
+            log.info(f"skipping {url}")
         except Exception as e:
             log.exception(f"error in {url}")
 
