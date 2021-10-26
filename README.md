@@ -8,10 +8,27 @@ we're going to put non-website-running tools here, for instance:
 
 # How to generate money data
 
-I DON'T REMEMBER AND WISH I'D WRITTEN IT DOWN.
+Overall process:
 
-DON'T BE LIKE ME.
-WRITE IT DOWN.
+locally, download the bank reports:
+```bash
+python download_ocpfus.py --bankreports
+```
+
+save this file into the codebase and deploy it to production
+
+log into heroku, and start a bash session:
+```
+heroku login
+```
+```
+heroku run bash --app cambridge-council
+```
+
+load the bank reports:
+```
+python manage.py load_bank_reports cambridge_bank_reports.csv
+```
 
 ## Downloading from ocpf.us
 
@@ -25,8 +42,9 @@ There are a few options (and you've probably set up python better than I have):
 
 ## Move reports to prod server
 
+This is useful for testing but it tends to timeout:
 ```
 heroku run 'python manage.py load_bank_reports -' < cambridge_bank_reports.csv --app cambridge-council
 ```
 
-... maybe?
+hence we've started deploying the fite and then loading it from a dyno.
