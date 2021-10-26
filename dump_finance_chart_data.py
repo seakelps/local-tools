@@ -8,18 +8,17 @@ import sys
 
 writer = csv.writer(sys.stdout)
 
-for c in Candidate.objects.filter(is_running=True).exclude(cpf_id=None):
+for c in Candidate.objects.filter(is_running=True).filter(hide=False).exclude(cpf_id=None):
     try:
         balance = cfm.RawBankReport.objects\
             .filter(cpf_id=c.cpf_id)\
             .latest("filing_date").ending_balance_display
     except cfm.RawBankReport.DoesNotExist:
         balance = None
-
     writer.writerow((
         c.fullname,
         balance,
-        cfm.get_candidate_2019_raised(c.cpf_id),
-        cfm.get_candidate_2019_spent(c.cpf_id),
-        cfm.get_candidate_money_at_start_of_2019(c.cpf_id),
+        cfm.get_candidate_2021_raised(c.cpf_id),
+        cfm.get_candidate_2021_spent(c.cpf_id),
+        cfm.get_candidate_money_at_start_of_2021(c.cpf_id),
     ))
