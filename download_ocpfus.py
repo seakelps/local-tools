@@ -42,8 +42,8 @@ candidates_2021 = {
     16526: 'theodora-skeadas',
     17581: 'tonia-hicks',
     # not finding, don't know why
-    # 17732: 'robert-eckstut'
-    # 17709: 'roy-ribitzky'
+    17732: 'robert-eckstut',
+    17709: 'roy-ribitzky',
 }
 
 
