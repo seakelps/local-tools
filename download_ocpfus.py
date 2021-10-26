@@ -17,7 +17,6 @@ from datetime import timedelta
 
 requests_cache.install_cache("donor_history", expire_after=timedelta(hours=1))
 
-
 candidates_2021 = {
     # 2021 incumbents
     16530: 'alanna-marie-mallon',
@@ -61,6 +60,7 @@ def get_registered_filer_ids():
     Craig A. Kelley, and David P. Maher.
     """
 
+def get_councillor_cpf_ids(seed):
     return candidates_2021
 
     # preseed with current
@@ -98,7 +98,7 @@ def get_registered_filer_ids():
 
     found_councillors = {id_: name.lower().replace(' ', '-')
                          for id_, name in candidates[['CPF_ID', 'Candidate_Full_Name']].values}
-    found_councillors.update(councillors)
+    found_councillors.update(seed)
     return found_councillors
 
 
@@ -148,23 +148,40 @@ if __name__ == "__main__":
     a.add_argument("--donors", action='store_true')
     a.add_argument("--expenditures", action='store_true')
     a.add_argument("--bankreports", action='store_true')
+    a.add_argument("--dump-ids", action='store_true')
     args = a.parse_args()
 
-    filers = get_registered_filer_ids()
+    # preseed with current
+    councillors = {
+        15680: "carlone",  # Carlone Committee
+        50019: "carlone2",  # Carlone for Council Recount
+        16062: "devereux",  # Devereux
+        13783: "denise-simmons",  # Simmons Committee
+        14923: "leland-cheung",  # Cheung Committee
+        15589: "marc-mcgovern",  # McGovern Committee
+        12222: "timothy-toomey",  # Toomey Committee
+        15615: "nadeem-mazen",  # Mazen Committee
+        14104: "craig-kelley",  # Kelley Committee
+        13740: "maher",  # Maher Committee
+    }
 
-    if not (args.donors or args.expenditures or args.bankreports):
+    filers = get_councillor_cpf_ids(seed=councillors)
+
+    if not (args.donors or args.expenditures or args.bankreports or args.dump_ids):
         a.print_help()
         exit(1)
 
-    # TODO: COMMENT HI ALEX
+    if args.dump_ids:
+        with open("ocpf_filers.csv", "w") as fp:
+            fp.write(filers)
+
     if args.donors:
-        with open("cambridge_donors.csv", "w") as fp:
+        with open("ocpf_donors.csv", "w") as fp:
             for cpf_id in tqdm(filers):
                 fp.write(get_donors_by_candidate(cpf_id).content.decode('utf-8'))
 
-    # TODO: COMMENT HI ALEX
     if args.expenditures:
-        with open("cambridge_expenditures.csv", "w") as fp:
+        with open("ocpf_expenditures.csv", "w") as fp:
             out = None
             for cpf_id in tqdm(filers):
                 for row in get_expenditures_by_candidate(cpf_id):
@@ -175,7 +192,7 @@ if __name__ == "__main__":
 
     # graps the json response, converts it to csv, saves it
     if args.bankreports:
-        with open("cambridge_bank_reports.csv", "w") as fp:
+        with open("ocpf_bank_reports.csv", "w") as fp:
             out = None
             for cpf_id in tqdm(filers):
                 #print(f"processing {cpf_id}")
