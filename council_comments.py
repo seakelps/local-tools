@@ -106,7 +106,7 @@ def download_communication(
         return None
 
     match = re.match(
-        r"\s*(An |A )?(?P<doc_type>.*) was received? from (?P<name>.*),? (regarding|transmitting|proposing|thanking|support|supporting|in opposition of|in support of)\W? (?P<topic>.*)\s*",
+        r"\s*(An |A |Two |Three )?(?P<doc_type>.*)( was)? (received|transmitted| )?(from|by) (?P<name>.*),? (regarding|transmitting|proposing|thanking|support|supports|supported|supporting|urging|oppose|opposed|opposes|opposing|in opposition|in support|please|relating|relates|requesting|suggesting|explaining|expressing|continue|advising|encouraging|keep|turn|commented|commenting|related|relate|against|for|preserve|Regarding|acknowledging|declaring|concerning|voicing|approve|outlining|raising|in favor|endorsing|in recognition|announcing|spoke about|stating|reflecting|acknowledges|relative|on matters|on items|highlighting|to amend|re|submitting)\W? (?P<topic>.*)\s*",
         header.text,
     )
     if match:
