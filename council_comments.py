@@ -106,7 +106,7 @@ def download_communication(
         return None
 
     match = re.match(
-        r"\s*(An |A )?(?P<doc_type>.*) was received? from (?P<name>.*),? (regarding|transmitting|proposing|thanking) (?P<topic>.*)\s*",
+        r"\s*(An |A )?(?P<doc_type>.*) was received? from (?P<name>.*),? (regarding|transmitting|proposing|thanking|support|supporting|in opposition of|in support of)\W? (?P<topic>.*)\s*",
         header.text,
     )
     if match:
