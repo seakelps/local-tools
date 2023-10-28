@@ -1,10 +1,11 @@
-html2text
 bs4
+html2text
+html5lib
+lxml
+openpyxl
+pandas
+python-dateutil
 requests
 requests_cache
-python-dateutil
-lxml
-pandas
-xlrd
 tqdm
-openpyxl
+xlrd
