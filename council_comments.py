@@ -1,16 +1,3 @@
-""" Download public/email comments from cambridge city council """
-
-from html2text import html2text
-import csv
-import logging
-from urllib.parse import parse_qsl, urlparse
-from collections import defaultdict
-import re
-import bs4
-import requests
-import requests_cache
-from dateutil.parser import parse as parse_dt
-
 """
 base link: cambridgema.iqm2.com/Citizens/calendar.aspx?From=1/1/2013&To=12/31/2023
 
@@ -27,123 +14,172 @@ which is _also_ a link
 just getting all links that have the last names of all the candidates.....
 """
 
+import csv
+import logging
+import re
+from dataclasses import asdict, dataclass, field, fields
+from datetime import date
+from typing import cast
+from urllib.parse import parse_qsl, urlparse
+
+import bs4
+import requests
+import requests_cache
+import tqdm
+from dateutil.parser import parse as parse_dt
+from tqdm.contrib.logging import logging_redirect_tqdm
+
 requests_cache.install_cache("member_history")
-HISTORY = 'http://cambridgema.iqm2.com/Citizens/Detail_BoardMember.aspx?ID={member_id}&ShowAllItems=True&DateFilter=a&Action=GetVoteHistory&Page={page}'  # noqa
-ITEM_LINK = 'http://cambridgema.iqm2.com/Citizens/Detail_LegiFile.aspx?MeetingID={meeting_id}&ID={item_id}'  # noqa
+log = logging.getLogger(__name__)
 
 
-# 1503
-MEETING_IDS = []
-
-# Meeting id : [list of communication ids]
-# 1503: [1, 2, 3,...]
-MEETING_COMMUNICATIONS = {}
-
-# communication ids : {name:, meeting:, regarding:, date:}
-COMM_NAMES: {}
+MeetingId = int
+CommunicationId = int
 
 
-def 
+def COMMUNICATION_URL(id: CommunicationId) -> str:
+    return f"http://cambridgema.iqm2.com/Citizens/Detail_LegiFile.aspx?ID={id}"
 
 
-def download_history(member_id):
-    candidate_votes = {}
-
-    for page in range(1, 100):  # seems to run out of info after 10 pages
-        page = requests.get(HISTORY.format(member_id=member_id, page=page))
-        page.raise_for_status()  # not actually 404 at end of pagination
-
-        page_soup = bs4.BeautifulSoup(page.content, 'lxml')
-        items = page_soup.find_all(id=re.compile("rptVoteHistory_lnkTitle_.*"))
-        votes = page_soup.find_all(id=re.compile("rptVoteHistory_lblVote_.*"))
-
-        assert items
-        assert len(items) == len(votes)
-
-        added = 0
-
-        for item, vote in zip(items, votes):
-            # internal ids repeated on each page
-            item_element_id = int(item.attrs['id'].rsplit('_', 1)[-1])
-            vote_element_id = int(vote.attrs['id'].rsplit('_', 1)[-1])
-            assert vote_element_id == item_element_id  # make sure the zip will work for sanity
-
-            qdict = dict(parse_qsl(urlparse(item.attrs['href']).query))
-            try:
-                key = int(qdict['MeetingID']), int(qdict['ID'])
-            except KeyError:
-                continue
-
-            ITEMS[key] = item.text
-
-            if key not in candidate_votes:
-                added += 1
-                candidate_votes[key] = vote.text
-
-        if not added:
-            return candidate_votes
-    raise ValueError("more than 100 pages history?")
+def MEETING_URL(id: MeetingId) -> str:
+    return f"https://cambridgema.iqm2.com/Citizens/Detail_Meeting.aspx?ID={id}"
 
 
-def download_descriptions():
-    # updates the ITEMS dictionary
+@dataclass
+class Communication:
+    id: CommunicationId
+    meeting_id: MeetingId
+    doc_type: str  # communication, written protest
+    name: str
+    regarding: str
+    date: date | None
 
-    for meeting_id, item_id in ITEMS.keys():
-        url = ITEM_LINK.format(meeting_id=meeting_id, item_id=item_id)
-        resp = requests.get(url)
-        resp.raise_for_status()
+    communication_url: str = field(init=False)
+    meeting_url: str = field(init=False)
 
-        item_soup = bs4.BeautifulSoup(resp.content, 'lxml')
-        # seems like always just 1
-        try:
-            body = item_soup.find(id="divBody").find(class_="LegiFileSectionContents")
-        except AttributeError:
-            body = None
-        else:
-            body = html2text(body.decode())
+    def __post_init__(self, **kwargs):
+        self.meeting_url = MEETING_URL(self.meeting_id)
+        self.communication_url = COMMUNICATION_URL(self.id)
 
-        try:
-            date = parse_dt(item_soup.find(id="ContentPlaceholder1_lnkDate").text).date()
-        except AttributeError:
-            import ipdb
-            ipdb.set_trace()
 
-        ITEMS[(meeting_id, item_id)] = (
-            item_soup.find(id="ContentPlaceholder1_lblLegiFileTitle").text,
-            body,
-            date,
+def get_all_meetings(session) -> list[MeetingId]:
+    resp = session.get(
+        "https://cambridgema.iqm2.com/Citizens/calendar.aspx?From=1/1/2010&To=12/31/2024"
+    )
+    resp.raise_for_status()
+
+    soup = bs4.BeautifulSoup(resp.content, "html5lib")
+    meetings = soup.find_all("a", href=re.compile("Detail_Meeting"))
+
+    return [
+        int(extract_query_param(meeting_a.attrs["href"], "ID"))
+        for meeting_a in meetings
+    ]
+
+
+def extract_from_meeting(session, meeting_id: MeetingId) -> list[CommunicationId]:
+    url = MEETING_URL(meeting_id)
+    resp = session.get(url, timeout=10)
+    resp.raise_for_status()
+
+    soup = bs4.BeautifulSoup(resp.content, "html5lib")
+    if not soup:
+        raise ValueError("no soup for you")
+
+    return [
+        int(extract_query_param(a.attrs["href"], "ID"))
+        for a in soup.find_all("a", string=re.compile("^COM "))
+    ]
+
+
+def download_communication(
+    session, communication_id: CommunicationId, meeting_id: MeetingId | None = None
+) -> Communication | None:
+    url = COMMUNICATION_URL(communication_id)
+    resp = session.get(url, timeout=10)
+    resp.raise_for_status()
+
+    soup = bs4.BeautifulSoup(resp.content, "html5lib")
+    header = soup.find(id="ContentPlaceholder1_lblLegiFileTitle")
+    if not header:
+        log.warning("com %s: no header", communication_id)
+        return None
+
+    match = re.match(
+        r"\s*(An |A )?(?P<doc_type>.*) was received? from (?P<name>.*),? regarding (?P<topic>.*)\s*",
+        header.text,
+    )
+    if match:
+        name = match.group("name").strip(",")
+        doc_type = match.group("doc_type")
+        regarding = match.group("topic")
+    else:
+        log.warning("com %s: can't parse header", communication_id)
+        name = "UNKNOWN"
+        doc_type = "UNKNOWN"
+        regarding = header.text
+
+    if date_str := soup.find("a", id="ContentPlaceholder1_lnkDate"):
+        comment_date = parse_dt(date_str.text)
+    else:
+        log.warning("com %s: no comment date", communication_id)
+        comment_date = None
+
+    if not meeting_id:
+        # passing in, but could derive
+        meeting_id = int(
+            extract_query_param(cast(bs4.Tag, comment_date).attrs["href"], "ID")
         )
+
+    return Communication(
+        id=communication_id,
+        meeting_id=meeting_id,
+        name=name,
+        doc_type=doc_type,
+        regarding=regarding,
+        date=comment_date,
+    )
+
+
+def extract_query_param(url, param: str) -> str:
+    """extract query param from url"""
+    return dict(parse_qsl(urlparse(url).query))[param]
+
+
+def main():
+    session = requests.Session()
+    session.headers.update(
+        {
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/102.0.0.0 Safari/537.36"
+        }
+    )
+
+    with open("public_comment.csv", "w") as fp, logging_redirect_tqdm():
+        writer = csv.DictWriter(fp, fieldnames=[f.name for f in fields(Communication)])
+        writer.writeheader()
+
+        for meeting_id in tqdm.tqdm(
+            get_all_meetings(session), desc="meetings", position=0
+        ):
+            for communication_id in tqdm.tqdm(
+                extract_from_meeting(session, meeting_id),
+                desc="communications",
+                leave=False,
+                position=1,
+            ):
+                communication = download_communication(
+                    session,
+                    communication_id,
+                    meeting_id=meeting_id,
+                )
+                if communication:
+                    if communication.doc_type not in {
+                        "written protest",
+                        "communication",
+                    }:
+                        tqdm.tqdm.write(communication.doc_type)
+                    writer.writerow(asdict(communication))
 
 
 if __name__ == "__main__":
-    council_votes = defaultdict(dict)
-
-    for member_id, councilor in COUNCIL.items():
-        logging.info("processing %s", councilor)
-        for item, vote in download_history(member_id).items():
-            council_votes[item][councilor] = vote
-
-    download_descriptions()
-
-    print("saving to voting_record.csv")
-    with open('voting_record.csv', 'w') as fp:
-        fieldnames = ['meeting_id', 'item_id', 'date', 'item_description', 'item_body'] \
-            + list(COUNCIL.values())
-        record = csv.DictWriter(fp, fieldnames=fieldnames)
-        record.writeheader()
-        for (meeting_id, item_id), councilor_votes in council_votes.items():
-            item_description, item_body, date = ITEMS[(meeting_id, item_id)]
-            row = {
-                "meeting_id": meeting_id,
-                "item_id": item_id,
-                "date": date,
-                "item_description": item_description,
-                "item_body": item_body,
-            }
-            row.update(councilor_votes)
-            record.writerow(row)
-
-    print(ITEMS[item])
-
-    print("sample lookup")
-    print(council_votes[(1557, 2145)])
+    main()
