@@ -18,32 +18,34 @@ from datetime import timedelta
 requests_cache.install_cache("donor_history", expire_after=timedelta(hours=1))
 
 
-candidates_2021 = {
-    # 2021 incumbents
-    16530: 'alanna-marie-mallon',
-    12222: 'timothy-toomey',
+candidates_2023 = {
+    # 2023 incumbents
+    17206: 'burhan-azeem',
     13783: 'denise-simmons',
     15589: 'marc-mcgovern',
-    15680: 'carlone',
-    50019: 'carlone2',
     17259: 'patricia-m.-nolan',
-    17146: 'jivan-g.-sobrinho-wheeler',
-    16516: 'quinton-yves-zondervan',
     16556: 'sumbul-siddiqui',
-    # challengers
-    17206: 'burhan-azeem',
-    17586: 'dana-bullister',
+    16576: 'paul-f.-toner',
+    # challengers who've run before
+    17146: 'jivan-g.-sobrinho-wheeler',
     17580: 'frantz-pierre',
     14683: 'gregg-j.-moree',
-    16173: 'ilan-s.-levy',
     17593: 'joe-mcguirk',
-    17148: 'nicola-a.-williams',
-    16576: 'paul-f.-toner',
-    16526: 'theodora-skeadas',
-    17581: 'tonia-hicks',
-    # not finding, don't know why
-    17732: 'robert-eckstut',
-    17709: 'roy-ribitzky',
+    # new challengers
+    18485: 'adrienne-klein',
+    18454: 'ayah-al-zubi',
+    17288: 'ayesha-wilson',
+    18542: 'carrie-pasquarello',
+    18510: 'cathie-zusy',
+    18505: 'dan-totten',
+    18567: 'doug-brown',
+    18568: 'federico-muchnik',
+    18564: 'hao-wang',
+    18495: 'joan-pickett',
+    18561: 'john-hanratty',
+    18437: 'peter-hsu',
+    18548: 'robert-winters',
+    18461: 'vernon-k.-walker',
 }
 
 
@@ -61,20 +63,21 @@ def get_registered_filer_ids():
     Craig A. Kelley, and David P. Maher.
     """
 
-    return candidates_2021
+    return candidates_2023
 
     # preseed with current
     councillors = {
-        15680: "carlone",  # Carlone Committee
-        50019: "carlone2",  # Carlone for Council Recount
+        #15680: "carlone",  # Carlone Committee
+        #50019: "carlone2",  # Carlone for Council Recount
         # 16062: "devereux",  # Devereux
         13783: "denise-simmons",  # Simmons Committee
         # 14923: "leland-cheung",  # Cheung Committee
         15589: "marc-mcgovern",  # McGovern Committee
-        12222: "timothy-toomey",  # Toomey Committee
+        #12222: "timothy-toomey",  # Toomey Committee
         # 15615: "nadeem-mazen",  # Mazen Committee
         # 14104: "craig-kelley",  # Kelley Committee
         # 13740: "maher",  # Maher Committee
+
     }
 
     registration_resp = requests.get(
@@ -105,7 +108,7 @@ def get_registered_filer_ids():
 def get_donors_by_candidate(cpf_id):
     # for some reason this is a tsv and cpf_id list is a csv
     return requests.get(
-        "http://www.ocpf.us/Data/GetTextOutput?SearchType=A&CityCode=0&FilerCpfId={}"
+        "http://www.ocpf.us/ReportData/GetTextOutput?SearchType=A&CityCode=0&FilerCpfId={}"
         .format(cpf_id))
 
 
@@ -117,17 +120,31 @@ def get_expenditures_by_candidate(cpf_id):
 
     size = 500
     for page in range(0, 20):
-        resp = requests.get(
-            "http://www.ocpf.us/ReportData/GetReportItems?PageSize={}&CurrentIndex={}&SortField=&SortDirection=ASC&SearchType=B&reportFilerCpfId={}"  # noqa
-            .format(size, page * size + 1, cpf_id))
+        # 2021 and earlier
+        #resp = requests.get(
+        #    "http://www.ocpf.us/ReportData/GetReportItems?PageSize={}&CurrentIndex={}&SortField=&SortDirection=ASC&SearchType=B&reportFilerCpfId={}"  # noqa
+        #    .format(size, page * size + 1, cpf_id))
+
+        # 2023
+        # https://ocpf.us/ReportData/GetTextOutput?1=1&filerCpfId=16576&searchTypeCategory=B
+        # GetSearchRecordTypes?searchTypeCategory=B
+
+        # https://ocpf.us/ReportData/GetTextOutput?1=1?pageSize=50&currentIndex=1&sortField=&sortDirection=DESC&filerCpfId=16576&searchTypeCategory=B
+
+        # https://ocpf.us/ReportData/GetItemsAndSummary?pageSize=50&currentIndex=1&sortField=&sortDirection=DESC&filerCpfId=16576&searchTypeCategory=B&withSummary=true
+
+        url = f"http://www.ocpf.us/ReportData/GetItemsAndSummary?pageSize={size}&currentIndex={page * size + 1}&sortField=&sortDirection=DESC&filerCpfId={cpf_id}&searchTypeCategory=B"
+        resp = requests.get(url)
 
         resp.raise_for_status()
         js = resp.json()
 
-        if not js:
+        if not js or "items" not in js:
             continue
 
-        for row in js:
+        items = js["items"]
+
+        for row in items:
             yield row
 
 
