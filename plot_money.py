@@ -11,12 +11,12 @@ from matplotlib.ticker import FormatStrFormatter
 import matplotlib.cm as cm
 
 
-def get_candidates():
+def get_candidates(year=2023):
     from overview.models import Candidate
     from campaign_finance.models import (
         RawBankReport,
-        get_candidate_2021_raised, get_candidate_2021_spent,
-        get_candidate_money_at_start_of_2021)
+        get_candidate_raised_year, get_candidate_spent_year,
+        get_candidate_money_at_start_of_year)
     print('working!')
 
     def balance(candidate):
@@ -30,9 +30,9 @@ def get_candidates():
 
     print([(c.fullname,
             balance(c),
-            get_candidate_2021_raised(c.cpf_id),
-            get_candidate_2021_spent(c.cpf_id),
-            get_candidate_money_at_start_of_2021(c.cpf_id))
+            get_candidate_raised_year(c.cpf_id, year),
+            get_candidate_spent_year(c.cpf_id, year),
+            get_candidate_money_at_start_of_year(c.cpf_id, year))
            for c in Candidate.objects.filter(is_running=True)])
 
 
@@ -55,8 +55,8 @@ def plot_data(data):
     ax.set_xlim(-2000, xs.max() + 1000)
     ax.set_ylim(-4000, ys.max() + 200)
 
-    plt.xlabel("Raised in 2021", fontsize=20)
-    plt.ylabel("Spent in 2021", fontsize=20)
+    plt.xlabel("Raised in 2023", fontsize=20)
+    plt.ylabel("Spent in 2023", fontsize=20)
     ax.annotate("Operating Balance\nfor City Council Candidates\nCambridge, MA (9/2021)",
                 (0.5, 0.90), ha="center", xycoords="axes fraction", fontsize=20)
     ax.annotate("cambridgecouncilcandidates.com",
