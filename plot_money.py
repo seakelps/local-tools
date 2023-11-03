@@ -33,7 +33,7 @@ def get_candidates(year=2023):
             get_candidate_raised_year(c.cpf_id, year),
             get_candidate_spent_year(c.cpf_id, year),
             get_candidate_money_at_start_of_year(c.cpf_id, year))
-           for c in Candidate.objects.filter(is_running=True)])
+           for c in Candidate.objects.filter(is_running=True).filter(hide=False)])
 
 
 def plot_data(data):
