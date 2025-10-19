@@ -63,8 +63,9 @@ class Communication:
 
 
 def get_all_meetings(session) -> list[MeetingId]:
+    today = date.today()
     resp = session.get(
-        "https://cambridgema.iqm2.com/Citizens/calendar.aspx?From=1/1/2010&To=12/31/2024"
+        f"https://cambridgema.iqm2.com/Citizens/calendar.aspx?From=6/26/2023&To={today.strftime('%m/%d/%Y')}"
     )
     resp.raise_for_status()
 
@@ -154,9 +155,9 @@ def main():
         }
     )
 
-    with open("public_comment.csv", "w") as fp, logging_redirect_tqdm():
+    with open("public_comment.csv", "a") as fp, logging_redirect_tqdm():
         writer = csv.DictWriter(fp, fieldnames=[f.name for f in fields(Communication)])
-        writer.writeheader()
+        # writer.writeheader()
 
         for meeting_id in tqdm.tqdm(
             get_all_meetings(session), desc="meetings", position=0
@@ -167,18 +168,22 @@ def main():
                 leave=False,
                 position=1,
             ):
-                communication = download_communication(
-                    session,
-                    communication_id,
-                    meeting_id=meeting_id,
-                )
-                if communication:
-                    if communication.doc_type not in {
-                        "written protest",
-                        "communication",
-                    }:
-                        tqdm.tqdm.write(communication.doc_type)
-                    writer.writerow(asdict(communication))
+                try:
+                    communication = download_communication(
+                        session,
+                        communication_id,
+                        meeting_id=meeting_id,
+                    )
+                except requests.RequestException:
+                    logging.warning("failed to scrape", exc_info=True)
+                else:
+                    if communication:
+                        if communication.doc_type not in {
+                            "written protest",
+                            "communication",
+                        }:
+                            tqdm.tqdm.write(communication.doc_type)
+                        writer.writerow(asdict(communication))
 
 
 if __name__ == "__main__":
